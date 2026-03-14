@@ -112,17 +112,13 @@ set_static() {
     nmcli con show "$CONN_NAME" > "$backup_file" 2>/dev/null
     echo -e "${DIM}当前配置已备份到 ${backup_file}${RST}"
 
-    # 应用配置
-    sudo nmcli con mod "$CONN_NAME" ipv4.method manual
-    sudo nmcli con mod "$CONN_NAME" ipv4.addresses "$ip_mask"
-    sudo nmcli con mod "$CONN_NAME" ipv4.gateway "$gateway"
-
-    if [ -n "$dns" ]; then
-        sudo nmcli con mod "$CONN_NAME" ipv4.dns "$dns"
-    else
-        # 不指定 DNS 时用网关做 DNS
-        sudo nmcli con mod "$CONN_NAME" ipv4.dns "$gateway"
-    fi
+    # 应用配置（必须一条命令同时设 method + address，否则 NM 报错）
+    local use_dns="${dns:-$gateway}"
+    sudo nmcli con mod "$CONN_NAME" \
+        ipv4.method manual \
+        ipv4.addresses "$ip_mask" \
+        ipv4.gateway "$gateway" \
+        ipv4.dns "$use_dns"
 
     echo -e "${YEL}正在重新激活连接...${RST}"
     sudo nmcli con up "$CONN_NAME" 2>&1 || true
